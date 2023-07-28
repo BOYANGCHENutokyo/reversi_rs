@@ -2,6 +2,7 @@
 pub struct Board {
     black: u64,
     white: u64,
+    pub turns: usize
 }
 
 #[inline]
@@ -9,10 +10,10 @@ pub fn put(bits: u64, r: u8, c: u8) -> u64 {
     bits | (1 << (r * 8 + c))
 }
 
-#[inline]
-pub fn get(bits: u64, r: u8, c: u8) -> bool {
-    bits >> (r * 8 + c) & 1 == 1
-}
+// #[inline]
+// pub fn get(bits: u64, r: u8, c: u8) -> bool {
+//     bits >> (r * 8 + c) & 1 == 1
+// }
 
 impl Board {
     const MASKS: [(u8, u64); 4] = [
@@ -22,11 +23,21 @@ impl Board {
         (9, 0x007e7e7e7e7e7e00)
     ];
 
+    pub const MAX_EVAL: i32 = i32::MAX;
+
     pub fn new() -> Board {
         Board{black: put(put(0, 3, 4), 4, 3),
-              white: put(put(0, 3, 3), 4, 4)}
+              white: put(put(0, 3, 3), 4, 4),
+              turns: 4}
     }
 
+    pub fn clear(&mut self) {
+        self.black = put(put(0, 3, 4), 4, 3);
+        self.white = put(put(0, 3, 3), 4, 4);
+        self.turns = 4;
+    }
+
+    #[allow(dead_code)]
     pub fn print(&self) {
         println!(" |A B C D E F G H");
         println!("-+---------------");
@@ -52,8 +63,31 @@ impl Board {
         self.black = tmp;
     }
 
-    pub fn count(&self) -> (u32, u32) {
-        (self.black.count_ones(), self.white.count_ones())
+    pub fn evaluate(&self, black_mvs: u64, white_mvs: u64) -> i32 {
+        if self.white == 0 {
+            Board::MAX_EVAL
+        } else if self.black == 0 {
+            -Board::MAX_EVAL
+        } else {
+            #[inline]
+            fn eval(stones: u64, mvs: u64) -> i32 {
+                const CORNER: u64 = 0x81000000000081;
+                const NEAR_CORNER: u64 = 0b_01000010_11000011_00000000_00000000_00000000_00000000_11000011_01000010;
+                let stones_store = ((CORNER & stones).count_ones() << 5) as i32 - ((NEAR_CORNER & stones).count_ones() << 3) as i32;
+                stones_store * 8 + mvs.count_ones() as i32 * 4
+            }
+            eval(self.black, black_mvs) - eval(self.white, white_mvs)
+        }
+    }
+
+    pub fn evaluate_end(&self) -> i32 {
+        if self.black.count_ones() > self.white.count_ones() {
+            Board::MAX_EVAL
+        } else if self.black.count_ones() < self.white.count_ones() {
+            -Board::MAX_EVAL
+        } else {
+            0
+        }
     }
 
     pub fn legals(&self) -> (u64, [(u64, u64); 4]) {
@@ -94,7 +128,7 @@ impl Board {
     pub fn next(&mut self, mv: u64, hints: [(u64, u64); 4]) {
         debug_assert!(mv.count_ones() == 1);
         #[inline]
-        fn calc_rev(white: &u64, black: &u64, shift: &u8, mask: &u64, mv: &u64, hint: (u64, u64)) -> u64 {
+        fn calc_rev(white: &u64, shift: &u8, mask: &u64, mv: &u64, hint: (u64, u64)) -> u64 {
             let mut rev0: u64 = 0;
             let mut mov0 = (*mv).clone();
             if (hint.0 & mov0) == mov0 {
@@ -119,11 +153,12 @@ impl Board {
         let mut rev: u64 = 0;
         for i in 0..4 {
             let idx = i as usize;
-            rev |= calc_rev(&self.white, &self.black, &Board::MASKS[idx].0, &Board::MASKS[idx].1, &mv, hints[idx]);
+            rev |= calc_rev(&self.white, &Board::MASKS[idx].0, &Board::MASKS[idx].1, &mv, hints[idx]);
         }
 
         self.black |= mv | rev;
         self.white ^= rev;
+        self.turns += 1;
     }
 }
 

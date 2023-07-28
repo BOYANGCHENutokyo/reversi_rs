@@ -1,9 +1,10 @@
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::net::{TcpStream, ToSocketAddrs};
 use clap::Parser;
+use tailcall::tailcall;
 
 mod cmds;
-use cmds::{Color, color_to_string, Cmd, move_to_string, idx_to_move, move_to_idx, Move, Res};
+use cmds::{Color, Cmd, move_to_string, idx_to_move, move_to_idx, Res};
 mod parse;
 use parse::{tokenize, parse};
 mod bitboard;
@@ -79,20 +80,24 @@ fn print_scores(scores: Vec<(String, (i32, i32, i32))>) {
     }
 }
 
+#[tailcall]
 fn game(
     state: State,
     reader: &mut BufReader<&TcpStream>,
     writer: &mut BufWriter<&TcpStream>,
     color: Color,
     board: &mut Board,
-    oppo_name: String
+    oppo_name: String,
+    no_time: bool,
 ) {
+    const DEFAULT_DEPTH: usize = 11;
+    const REDUCED_DEPTH: usize = 8;
     match state {
         State::WaitingStart => match read_cmd(reader) {
             Cmd::Bye(scores) => {
                 print_scores(scores);
             }
-            Cmd::Start(color, oppo_name, time) => {
+            Cmd::Start(color, oppo_name, _) => {
                 match color {
                     Color::Black => {
                         game(
@@ -100,19 +105,20 @@ fn game(
                         reader,
                         writer,
                         Color::Black,
-                        &mut Board::new(),
-                        oppo_name
+                        board,
+                        oppo_name,
+                        no_time
                         )
                     },
                     Color::White => {
-                        board.exchange();
                         game(
                             State::OpMove,
                             reader,
                             writer,
                             Color::White,
-                            &mut Board::new(),
-                            oppo_name
+                            board,
+                            oppo_name,
+                            no_time
                         )
                     }
                     _ => {
@@ -125,9 +131,9 @@ fn game(
             }
         },
         State::MyMove => {
-            let (mv, hints) = search(board);
+            let (mv, hints) = search(board, if no_time {REDUCED_DEPTH} else {DEFAULT_DEPTH});
             write_cmd(writer, Cmd::Move(idx_to_move(&mv)));
-            if mv != 0{
+            if mv != 0 {
                 board.next(mv, hints);
             }
             #[cfg(debug_assertions)]
@@ -139,13 +145,14 @@ fn game(
                 writer,
                 color,
                 board,
-                oppo_name
+                oppo_name,
+                no_time
             )
         },
         State::OpMove => {
             match read_cmd(reader) {
                 Cmd::Move(mv) => {
-                    let (mvs, hints) = board.legals();
+                    let (_, hints) = board.legals();
                     if move_to_idx(&mv) != 0 {
                         board.next(move_to_idx(&mv), hints);
                     }
@@ -158,7 +165,8 @@ fn game(
                         writer,
                         color,
                         board,
-                        oppo_name
+                        oppo_name,
+                        no_time
                     )
                 },
                 Cmd::End(res, n, m, r) => {
@@ -166,14 +174,16 @@ fn game(
                         Res::Win => println!("You Win. ({} vs {}), {}", n, m, r),
                         Res::Lose => println!("You Lose. ({} vs {}), {}", n, m, r),
                         Res::Tie => println!("Draw. ({} vs {}), {}", n, m, r)
-                    }
+                    };
+                    board.clear();
                     game(
                         State::WaitingStart,
                         reader,
                         writer,
                         Color::Empty,
-                        &mut Board::new(),
-                        oppo_name
+                        board,
+                        oppo_name,
+                        false
                     )
                 },
                 _ => {
@@ -190,7 +200,8 @@ fn game(
                         writer,
                         color,
                         board,
-                        oppo_name
+                        oppo_name,
+                        if time < 30000 {true} else {false}
                     )
                 },
                 Cmd::End(res, n, m, r) => {
@@ -198,14 +209,16 @@ fn game(
                         Res::Win => println!("You Win. ({} vs {}), {}", n, m, r),
                         Res::Lose => println!("You Lose. ({} vs {}), {}", n, m, r),
                         Res::Tie => println!("Draw. ({} vs {}), {}", n, m, r)
-                    }
+                    };
+                    board.clear();
                     game(
                         State::WaitingStart,
                         reader,
                         writer,
                         Color::Empty,
-                        &mut Board::new(),
-                        oppo_name
+                        board,
+                        oppo_name,
+                        false
                     )
                 },
                 _ => {
@@ -234,6 +247,7 @@ fn main() {
         &mut writer,
         Color::Empty,
         &mut Board::new(),
-        args.player.clone()
+        args.player.clone(),
+        false
     );
 }

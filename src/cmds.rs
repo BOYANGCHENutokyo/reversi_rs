@@ -5,14 +5,6 @@ pub enum Color {
     Black,
 }
 
-pub fn color_to_string(c: Color) -> String {
-    match c {
-        Color::White => "White".to_string(),
-        Color::Black => "Black".to_string(),
-        _ => panic!("Illegal Type of Color to Convert!")
-    }
-}
-
 #[derive(Debug)]
 pub enum Res {
     Win,
