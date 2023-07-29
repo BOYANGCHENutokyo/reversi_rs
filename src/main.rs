@@ -63,7 +63,7 @@ fn write_cmd(writer: &mut BufWriter<&TcpStream>, cmd: Cmd) {
 fn read_cmd_inner(reader: &mut BufReader<&TcpStream>, buf: &mut String) -> Cmd {
     reader.read_line(buf).expect("Receive Error!");
     #[cfg(debug_assertions)]
-    print!("Received: {}", &msg);
+    print!("Received: {}", buf);
     let mut tokens = Vec::new();
     tokenize(buf, &mut tokens);
     match parse(&mut tokens) {
@@ -95,7 +95,7 @@ fn game(
     oppo_name: String,
     no_time: bool,
 ) {
-    const DEFAULT_DEPTH: usize = 11;
+    const DEFAULT_DEPTH: usize = 10;
     const REDUCED_DEPTH: usize = 8;
     match state {
         State::WaitingStart => match read_cmd(reader) {

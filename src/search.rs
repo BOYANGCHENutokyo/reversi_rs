@@ -56,8 +56,8 @@ pub fn search(board: &Board, depth: usize) -> (u64, [(u64, u64); 4]) {
             let mut new_board = board.clone();
             new_board.next(mov, hints);
             new_board.exchange();
-            let score = if new_board.turns > 44 {
-                -alpha_beta(&new_board, -beta, -alpha, 20, false)
+            let score = if new_board.turns > 46 {
+                -alpha_beta(&new_board, -beta, -alpha, 64, false)
             } else {
                 -alpha_beta(&new_board, -beta, -alpha, depth - 1, false)
             };
