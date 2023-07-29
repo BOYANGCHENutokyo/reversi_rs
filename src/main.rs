@@ -59,19 +59,24 @@ fn write_cmd(writer: &mut BufWriter<&TcpStream>, cmd: Cmd) {
     }
 }
 
-fn read_cmd(reader: &mut BufReader<&TcpStream>) -> Cmd {
-    let mut msg = String::new();
-    reader.read_line(&mut msg).expect("Receive Error!");
+#[tailcall]
+fn read_cmd_inner(reader: &mut BufReader<&TcpStream>, buf: &mut String) -> Cmd {
+    reader.read_line(buf).expect("Receive Error!");
     #[cfg(debug_assertions)]
     print!("Received: {}", &msg);
     let mut tokens = Vec::new();
-    tokenize(&mut msg, &mut tokens);
+    tokenize(buf, &mut tokens);
     match parse(&mut tokens) {
         Some(cmd) => {
             cmd
         }
-        None => read_cmd(reader)
+        None => read_cmd_inner(reader, buf)
     }
+}
+
+fn read_cmd(reader: &mut BufReader<&TcpStream>) -> Cmd {
+    let mut msg = String::new();
+    read_cmd_inner(reader, &mut msg)
 }
 
 fn print_scores(scores: Vec<(String, (i32, i32, i32))>) {
