@@ -17,7 +17,10 @@ pub fn alpha_beta(board: &Board, alpha: i32, beta: i32, depth: usize, pass: bool
         let (white_mvs, _) = new_board.legals();
         board.evaluate(black_mvs, white_mvs)
     } else {
-        let mut mvs = (0..64).map(|i| 1 << i).filter(|&mv| mv & black_mvs == mv).collect::<Vec<_>>();
+        let mut mvs = (0..64)
+            .map(|i| 1 << i)
+            .filter(|&mv| mv & black_mvs == mv)
+            .collect::<Vec<_>>();
         let n = mvs.len();
         for i in 0..n - 1 {
             mvs.swap(i, i + random::<usize>() % (n - i));
@@ -39,12 +42,15 @@ pub fn alpha_beta(board: &Board, alpha: i32, beta: i32, depth: usize, pass: bool
     }
 }
 
-pub fn search(board: &Board, depth: usize) -> (u64, [(u64, u64); 4]) {
+pub fn search(board: &Board, depth: usize, time_level: usize) -> (u64, [(u64, u64); 4]) {
     let (mvs, hints) = board.legals();
     if mvs == 0 {
         (0, hints)
     } else {
-        let mut mvs = (0..64).map(|i| 1 << i).filter(|&mv| mv & mvs == mv).collect::<Vec<_>>();
+        let mut mvs = (0..64)
+            .map(|i| 1 << i)
+            .filter(|&mv| mv & mvs == mv)
+            .collect::<Vec<_>>();
         let n = mvs.len();
         for i in 0..n - 1 {
             mvs.swap(i, i + random::<usize>() % (n - i));
@@ -59,7 +65,7 @@ pub fn search(board: &Board, depth: usize) -> (u64, [(u64, u64); 4]) {
             let score = if new_board.turns > 46 {
                 -alpha_beta(&new_board, -beta, -alpha, 64, false)
             } else {
-                -alpha_beta(&new_board, -beta, -alpha, depth - 1, false)
+                -alpha_beta(&new_board, -beta, -alpha, depth - time_level * 2, false)
             };
             if alpha < score {
                 alpha = score;

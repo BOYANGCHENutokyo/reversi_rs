@@ -1,19 +1,18 @@
+use clap::Parser;
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::net::{TcpStream, ToSocketAddrs};
-use clap::Parser;
 use tailcall::tailcall;
 
 mod cmds;
-use cmds::{Color, Cmd, move_to_string, idx_to_move, move_to_idx, Res};
+use cmds::{idx_to_move, move_to_idx, move_to_string, Cmd, Color, Res};
 mod parse;
-use parse::{tokenize, parse};
+use parse::{parse, tokenize};
 mod bitboard;
 use bitboard::Board;
 mod search;
 use search::search;
 
-/// Reversi Command Line Interface
-/// Author: Luhao Liu <luhao.liu@a.riken.jp>
+/// Reversi Command Line Interface (by Luhao Liu <luhao.liu@a.riken.jp>)
 #[derive(Parser)]
 struct Args {
     /// Hostname
@@ -67,10 +66,8 @@ fn read_cmd_inner(reader: &mut BufReader<&TcpStream>, buf: &mut String) -> Cmd {
     let mut tokens = Vec::new();
     tokenize(buf, &mut tokens);
     match parse(&mut tokens) {
-        Some(cmd) => {
-            cmd
-        }
-        None => read_cmd_inner(reader, buf)
+        Some(cmd) => cmd,
+        None => read_cmd_inner(reader, buf),
     }
 }
 
@@ -93,50 +90,43 @@ fn game(
     color: Color,
     board: &mut Board,
     oppo_name: String,
-    no_time: bool,
+    time_level: usize,
 ) {
     const DEFAULT_DEPTH: usize = 10;
-    const REDUCED_DEPTH: usize = 8;
     match state {
         State::WaitingStart => match read_cmd(reader) {
             Cmd::Bye(scores) => {
                 print_scores(scores);
             }
-            Cmd::Start(color, oppo_name, _) => {
-                match color {
-                    Color::Black => {
-                        game(
-                        State::MyMove,
-                        reader,
-                        writer,
-                        Color::Black,
-                        board,
-                        oppo_name,
-                        no_time
-                        )
-                    },
-                    Color::White => {
-                        game(
-                            State::OpMove,
-                            reader,
-                            writer,
-                            Color::White,
-                            board,
-                            oppo_name,
-                            no_time
-                        )
-                    }
-                    _ => {
-                        panic!("Invalid Command");
-                    }
+            Cmd::Start(color, oppo_name, _) => match color {
+                Color::Black => game(
+                    State::MyMove,
+                    reader,
+                    writer,
+                    Color::Black,
+                    board,
+                    oppo_name,
+                    time_level,
+                ),
+                Color::White => game(
+                    State::OpMove,
+                    reader,
+                    writer,
+                    Color::White,
+                    board,
+                    oppo_name,
+                    time_level,
+                ),
+                _ => {
+                    panic!("Invalid Command");
                 }
-            }
+            },
             _ => {
                 panic!("Invalid Command");
             }
         },
         State::MyMove => {
-            let (mv, hints) = search(board, if no_time {REDUCED_DEPTH} else {DEFAULT_DEPTH});
+            let (mv, hints) = search(board, DEFAULT_DEPTH, time_level);
             write_cmd(writer, Cmd::Move(idx_to_move(&mv)));
             if mv != 0 {
                 board.next(mv, hints);
@@ -151,35 +141,53 @@ fn game(
                 color,
                 board,
                 oppo_name,
-                no_time
+                time_level,
             )
+        }
+        State::OpMove => match read_cmd(reader) {
+            Cmd::Move(mv) => {
+                let (_, hints) = board.legals();
+                if move_to_idx(&mv) != 0 {
+                    board.next(move_to_idx(&mv), hints);
+                }
+                board.exchange();
+                #[cfg(debug_assertions)]
+                board.print();
+                game(
+                    State::MyMove,
+                    reader,
+                    writer,
+                    color,
+                    board,
+                    oppo_name,
+                    time_level,
+                )
+            }
+            Cmd::End(res, n, m, r) => {
+                match res {
+                    Res::Win => println!("You Win. ({} vs {}), {}", n, m, r),
+                    Res::Lose => println!("You Lose. ({} vs {}), {}", n, m, r),
+                    Res::Tie => println!("Draw. ({} vs {}), {}", n, m, r),
+                };
+                board.clear();
+                game(
+                    State::WaitingStart,
+                    reader,
+                    writer,
+                    Color::Empty,
+                    board,
+                    oppo_name,
+                    0,
+                )
+            }
+            _ => {
+                panic!("Invalid Command");
+            }
         },
-        State::OpMove => {
-            match read_cmd(reader) {
-                Cmd::Move(mv) => {
-                    let (_, hints) = board.legals();
-                    if move_to_idx(&mv) != 0 {
-                        board.next(move_to_idx(&mv), hints);
-                    }
-                    board.exchange();
-                    #[cfg(debug_assertions)]
-                    board.print();
-                    game(
-                        State::MyMove,
-                        reader,
-                        writer,
-                        color,
-                        board,
-                        oppo_name,
-                        no_time
-                    )
-                },
-                Cmd::End(res, n, m, r) => {
-                    match res {
-                        Res::Win => println!("You Win. ({} vs {}), {}", n, m, r),
-                        Res::Lose => println!("You Lose. ({} vs {}), {}", n, m, r),
-                        Res::Tie => println!("Draw. ({} vs {}), {}", n, m, r)
-                    };
+        State::WaitingAck => match read_cmd(reader) {
+            Cmd::Ack(time) => {
+                if time < 0 {
+                    println!("You Lose. Time Up.");
                     board.clear();
                     game(
                         State::WaitingStart,
@@ -188,17 +196,9 @@ fn game(
                         Color::Empty,
                         board,
                         oppo_name,
-                        false
+                        0,
                     )
-                },
-                _ => {
-                    panic!("Invalid Command");
-                }
-            }
-        },
-        State::WaitingAck => {
-            match read_cmd(reader) {
-                Cmd::Ack(time) => {
+                } else {
                     game(
                         State::OpMove,
                         reader,
@@ -206,31 +206,37 @@ fn game(
                         color,
                         board,
                         oppo_name,
-                        if time < 30000 {true} else {false}
+                        if time > 30000 {
+                            0
+                        } else if time > 20000 {
+                            1
+                        } else {
+                            2
+                        },
                     )
-                },
-                Cmd::End(res, n, m, r) => {
-                    match res {
-                        Res::Win => println!("You Win. ({} vs {}), {}", n, m, r),
-                        Res::Lose => println!("You Lose. ({} vs {}), {}", n, m, r),
-                        Res::Tie => println!("Draw. ({} vs {}), {}", n, m, r)
-                    };
-                    board.clear();
-                    game(
-                        State::WaitingStart,
-                        reader,
-                        writer,
-                        Color::Empty,
-                        board,
-                        oppo_name,
-                        false
-                    )
-                },
-                _ => {
-                    panic!("Invalid Command");
                 }
             }
-        }
+            Cmd::End(res, n, m, r) => {
+                match res {
+                    Res::Win => println!("You Win. ({} vs {}), {}", n, m, r),
+                    Res::Lose => println!("You Lose. ({} vs {}), {}", n, m, r),
+                    Res::Tie => println!("Draw. ({} vs {}), {}", n, m, r),
+                };
+                board.clear();
+                game(
+                    State::WaitingStart,
+                    reader,
+                    writer,
+                    Color::Empty,
+                    board,
+                    oppo_name,
+                    0,
+                )
+            }
+            _ => {
+                panic!("Invalid Command");
+            }
+        },
     }
 }
 
@@ -238,10 +244,16 @@ fn main() {
     let args = Args::parse();
     println!("Player Name: {}", &args.player);
 
-    let addr = (args.hostname.clone(), args.port).to_socket_addrs().unwrap()
-        .find(|x| (*x).is_ipv4()).unwrap();
+    let addr = (args.hostname.clone(), args.port)
+        .to_socket_addrs()
+        .unwrap()
+        .find(|x| (*x).is_ipv4())
+        .unwrap();
     let stream = TcpStream::connect(addr).unwrap();
-    println!("Successfully connected to {}:{}.", &args.hostname, &args.port);
+    println!(
+        "Successfully connected to {}:{}.",
+        &args.hostname, &args.port
+    );
     let mut reader = BufReader::new(&stream);
     let mut writer = BufWriter::new(&stream);
 
@@ -253,6 +265,6 @@ fn main() {
         Color::Empty,
         &mut Board::new(),
         args.player.clone(),
-        false
+        0,
     );
 }
