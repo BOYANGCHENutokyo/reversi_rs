@@ -20,7 +20,7 @@ struct Args {
     hostname: String,
 
     /// Port
-    #[arg(short = 'p', default_value = "3000")]
+    #[arg(short = 'p', default_value = "30000")]
     port: u16,
 
     /// Player Name
