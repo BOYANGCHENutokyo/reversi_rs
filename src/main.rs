@@ -12,7 +12,8 @@ use bitboard::Board;
 mod search;
 use search::search;
 
-/// Reversi Command Line Interface (by Luhao Liu <luhao.liu@a.riken.jp>)
+/// Reversi Command Line Interface 
+// (この部分はIS23er: Luhao Liu <luhao.liu@a.riken.jp>の実装を参考しました。)
 #[derive(Parser)]
 struct Args {
     /// Hostname
@@ -20,7 +21,7 @@ struct Args {
     hostname: String,
 
     /// Port
-    #[arg(short = 'p', default_value = "30000")]
+    #[arg(short = 'p', default_value = "3000")]
     port: u16,
 
     /// Player Name

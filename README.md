@@ -1,24 +1,25 @@
 # リバーシAI
+
 ## ビルドと実行
 ```shell
 make all
 ```
-または
-```shell
-cargo build --release
-cp ./target/release/reversi ./reversi
+で`reversi`という名前の実行ファイルを生成できる．クライアントを起動するには`./reversi [OPTIONS] -n <PLAYER>`と打てばよい（`./`を付けてください）コマンドの詳細は以下の通り：
 ```
-で`reversi`という名前の実行ファイルを生成できる．オプションは以下の通り．
-```
--H <HOSTNAME>      Hostname [default: localhost]
--p <PORT>          Port [default: 3000]
--n <PLAYER>        Player Name
+Usage:
+Usage: reversi [OPTIONS] -n <PLAYER>
+
+Options:
+  -H <HOSTNAME>      Hostname [default: localhost]
+  -p <PORT>          Port [default: 3000]
+  -n <PLAYER>        Player Name
+  -h, --help         Print help
 ```
 
 ## 外部ライブラリ
 - `clap` - CLIから引数を処理するために利用している
 - `rand` - 探索順をランダムにするために利用している
-- `regex` - パーサ（[こちら](https://github.com/kaisugi/reversi)のレポジトリの一部を改変したもの）用
+- `regex` - パーサ
 - `tailcall` - 末尾再帰
 
 ## 方針
@@ -53,3 +54,9 @@ Rustでコンパイル時にどのように末尾再帰が採用されるかを�
 こちらでは一番最初のアルファだけを共有変数にし，これよりよくなることがなかったら，その探索を取りやめるという実装を行った．
 具体的な実装は`git checkout multithread`で見られる．共有変数なのでアトミックに更新するために非同期安全な参照カウント`Arc`を使った．
 しかし結果的には思ったほどの性能向上が見られなかったので，提出物には含めないことにした（シングルスレッドのものと対戦させてみて互角だったので問題ないと思うが，知らないバグがあると怖い）．
+
+## 謝辞：
+本プロジェクトの一部はISerの過去の実装を参考にしました。
+* Parser: Kaito Sugimotoさん　https://github.com/kaisugi/reversi
+* コマンドインターフェス: 23erのLuhao Liu
+* 自分がRust未熟のため、一部の実装はどうしてもデバッグが難しい、もしくはバグが非本質過ぎて時間の無駄なので、LLMを随所使いました。
