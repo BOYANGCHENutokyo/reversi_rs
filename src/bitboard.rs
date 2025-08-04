@@ -66,7 +66,7 @@ impl Board {
     }
 
     pub fn evaluate(&self, black_mvs: u64, white_mvs: u64) -> i32 {
-        /*
+        // current version (relatively low performance but fast)
         if self.white == 0 {
             Board::MAX_EVAL
         } else if self.black == 0 {
@@ -81,9 +81,9 @@ impl Board {
             }
             eval(self.black, black_mvs) - eval(self.white, white_mvs)
         }
-            */
-            // we use evaluator fun here
-            evaluator::evaluate_board(self, black_mvs, white_mvs)
+            
+            // we use evaluator fun here, this one is high performance but low speed
+            // evaluator::evaluate_board(self, black_mvs, white_mvs)
     }
 
     pub fn evaluate_end(&self) -> i32 {
