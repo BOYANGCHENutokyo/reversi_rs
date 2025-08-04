@@ -27,6 +27,16 @@ impl Board {
 
     pub const MAX_EVAL: i32 = i32::MAX;
 
+    // Trans
+    /*
+    pub fn get_opponent_legals(&self) -> u64 {
+        let mut temp_board = self.clone();
+        temp_board.exchange(); // 相手の視点に切り替える
+        let (opp_legals, _) = temp_board.legals();
+        opp_legals
+    }    
+    */
+    
     pub fn new() -> Board {
         Board{black: put(put(0, 3, 4), 4, 3),
               white: put(put(0, 3, 3), 4, 4),

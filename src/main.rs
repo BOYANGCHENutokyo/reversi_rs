@@ -16,6 +16,8 @@ use search::search;
 mod book;
 // add evaluator
 mod evaluator;
+// add trans
+mod transposition;
 
 /// Reversi Command Line Interface 
 // (この部分はIS23er: Luhao Liu <luhao.liu@a.riken.jp>の実装を参考しました。)
