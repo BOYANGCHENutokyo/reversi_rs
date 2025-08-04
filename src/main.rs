@@ -11,6 +11,8 @@ mod bitboard;
 use bitboard::Board;
 mod search;
 use search::search;
+// add book
+mod book;
 
 /// Reversi Command Line Interface 
 // (この部分はIS23er: Luhao Liu <luhao.liu@a.riken.jp>の実装を参考しました。)

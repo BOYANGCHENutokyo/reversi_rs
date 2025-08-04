@@ -2,6 +2,9 @@ use rand::random;
 
 use crate::bitboard::Board;
 
+// bookモジュールとグローバルな定石DBをインポート
+use crate::book::OPENING_BOOK;
+
 pub fn alpha_beta(board: &Board, alpha: i32, beta: i32, depth: usize, pass: bool) -> i32 {
     let (black_mvs, hints) = board.legals();
     if black_mvs == 0 && pass {
@@ -43,6 +46,16 @@ pub fn alpha_beta(board: &Board, alpha: i32, beta: i32, depth: usize, pass: bool
 }
 
 pub fn search(board: &Board, depth: usize, time_level: usize) -> (u64, [(u64, u64); 4]) {
+    // 1. まず定石データベースを検索する
+    if let Some(book_move) = OPENING_BOOK.get(board) {
+        eprintln!("[Info] Move from Opening Book!");
+        // 定石手が見つかった場合、既存の返り値の型に合わせて返す
+        // 配列の部分はダミーデータで埋める
+        let (_, hints) = board.legals();
+        return (book_move, hints);
+    }
+
+    // 2. 定石が見つからなかった場合、普通の探索処理を実行する
     let (mvs, hints) = board.legals();
     if mvs == 0 {
         (0, hints)

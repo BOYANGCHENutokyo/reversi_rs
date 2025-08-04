@@ -90,6 +90,14 @@ impl Board {
         }
     }
 
+    pub fn get_black(&self) -> u64 {
+        self.black
+    }
+
+    pub fn get_white(&self) -> u64 {
+        self.white
+    }
+
     pub fn legals(&self) -> (u64, [(u64, u64); 4]) {
         let blank: u64 = !(self.black.clone() | self.white.clone());
         let mut legals: u64 = 0;
