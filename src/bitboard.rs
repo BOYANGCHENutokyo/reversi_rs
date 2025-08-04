@@ -1,3 +1,5 @@
+use crate::evaluator;
+
 #[derive(Clone, Debug)]
 pub struct Board {
     black: u64,
@@ -64,6 +66,7 @@ impl Board {
     }
 
     pub fn evaluate(&self, black_mvs: u64, white_mvs: u64) -> i32 {
+        /*
         if self.white == 0 {
             Board::MAX_EVAL
         } else if self.black == 0 {
@@ -78,6 +81,9 @@ impl Board {
             }
             eval(self.black, black_mvs) - eval(self.white, white_mvs)
         }
+            */
+            // we use evaluator fun here
+            evaluator::evaluate_board(self, black_mvs, white_mvs)
     }
 
     pub fn evaluate_end(&self) -> i32 {
@@ -96,6 +102,28 @@ impl Board {
 
     pub fn get_white(&self) -> u64 {
         self.white
+    }
+
+    /// 現在の盤面状態を指定のフォーマットで表示する
+    pub fn print_board(&self, my_color: crate::cmds::Color) {
+        println!(" |A B C D E F G H ");
+        println!("-+----------------");
+        for y in 0..8 {
+            print!("{}|", y + 1);
+            for x in 0..8 {
+                let pos = 1u64 << (y * 8 + x);
+                let stone = if (self.black & pos) != 0 {
+                    'X' // Black
+                } else if (self.white & pos) != 0 {
+                    'O' // White
+                } else {
+                    ' ' // Empty
+                };
+                print!(" {}", stone);
+            }
+            println!(" ");
+        }
+        println!("  (X: Black,  O: White)");
     }
 
     pub fn legals(&self) -> (u64, [(u64, u64); 4]) {

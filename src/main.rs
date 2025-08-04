@@ -1,3 +1,4 @@
+
 use clap::Parser;
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::net::{TcpStream, ToSocketAddrs};
@@ -13,6 +14,8 @@ mod search;
 use search::search;
 // add book
 mod book;
+// add evaluator
+mod evaluator;
 
 /// Reversi Command Line Interface 
 // (この部分はIS23er: Luhao Liu <luhao.liu@a.riken.jp>の実装を参考しました。)
