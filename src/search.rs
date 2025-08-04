@@ -5,6 +5,7 @@ use crate::bitboard::Board;
 // bookモジュールとグローバルな定石DBをインポート
 use crate::book::OPENING_BOOK;
 
+// alpha-beta探索
 pub fn alpha_beta(board: &Board, alpha: i32, beta: i32, depth: usize, pass: bool) -> i32 {
     let (black_mvs, hints) = board.legals();
     if black_mvs == 0 && pass {
@@ -49,8 +50,7 @@ pub fn search(board: &Board, depth: usize, time_level: usize) -> (u64, [(u64, u6
     // 1. まず定石データベースを検索する
     if let Some(book_move) = OPENING_BOOK.get(board) {
         eprintln!("[Info] Move from Opening Book!");
-        // 定石手が見つかった場合、既存の返り値の型に合わせて返す
-        // 配列の部分はダミーデータで埋める
+        // 定石手が見つかった場合、既存の返り値の型に合わせて返す（配列の部分はダミーデータで埋める）
         let (_, hints) = board.legals();
         return (book_move, hints);
     }
@@ -75,6 +75,7 @@ pub fn search(board: &Board, depth: usize, time_level: usize) -> (u64, [(u64, u6
             let mut new_board = board.clone();
             new_board.next(mov, hints);
             new_board.exchange();
+            // 46手以降は読み切りモード
             let score = if new_board.turns > 46 {
                 -alpha_beta(&new_board, -beta, -alpha, 64, false)
             } else {
