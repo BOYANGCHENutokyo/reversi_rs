@@ -1,4 +1,5 @@
-#[derive(Debug)]
+//#[derive(Debug)]
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum Color {
     Empty,
     White,
@@ -12,7 +13,8 @@ pub enum Res {
     Tie,
 }
 
-#[derive(Clone, Copy, Debug)]
+//#[derive(Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum Move {
     To(i32, i32),
     Pass,
